@@ -1,5 +1,5 @@
-import sys, os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+#import sys, os
+#os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
 
 #import tensorflow as tf
@@ -322,6 +322,71 @@ def PlotError(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wav
     plt.savefig(f"{SavePath}{FieldType}Error-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
     #plt.show()
     plt.close()
+"""
+    if FieldType == "Electric" and PlotType == "Magnitude":
+        A = data[0]
+        colormap = 'jet'
+"""
+def DataSelectionTruth(Data, FieldType, PlotType, Coord):
+    if FieldType == "Electric" and PlotType == "Magnitude":
+        if Coord == "X":
+            return Data[0]
+        elif Coord == "Y":
+            return Data[1]
+        elif Coord == "Z":
+            return Data[2]
+    if FieldType == "Electric" and PlotType == "Phase":
+        if Coord == "X":
+            return Data[12]
+        elif Coord == "Y":
+            return Data[13]
+        elif Coord == "Z":
+            return Data[14]
+    if FieldType == "Magnetic" and PlotType == "Magnitude":
+        if Coord == "X":
+            return Data[6]
+        elif Coord == "Y":
+            return Data[7]
+        elif Coord == "Z":
+            return Data[8]
+    if FieldType == "Magnetic" and PlotType == "phase":
+        if Coord == "X":
+            return Data[18]
+        elif Coord == "Y":
+            return Data[19]
+        elif Coord == "Z":
+            return Data[20]
+        
+def DataSelectionPrediction(Data, FieldType, PlotType, Coord):
+    if FieldType == "Electric" and PlotType == "Magnitude":
+        if Coord == "X":
+            return Data[3]
+        elif Coord == "Y":
+            return Data[4]
+        elif Coord == "Z":
+            return Data[5]
+    if FieldType == "Electric" and PlotType == "Phase":
+        if Coord == "X":
+            return Data[15]
+        elif Coord == "Y":
+            return Data[16]
+        elif Coord == "Z":
+            return Data[17]
+    if FieldType == "Magnetic" and PlotType == "Magnitude":
+        if Coord == "X":
+            return Data[9]
+        elif Coord == "Y":
+            return Data[10]
+        elif Coord == "Z":
+            return Data[11]
+    if FieldType == "Magnetic" and PlotType == "phase":
+        if Coord == "X":
+            return Data[21]
+        elif Coord == "Y":
+            return Data[22]
+        elif Coord == "Z":
+            return Data[23]
+
 
 with open('DeepLearningMultipoleData.pkl', 'rb') as f:
     DataSet = pkl.load(f)
@@ -370,17 +435,46 @@ app.layout = html.Div(children=[
             }
         )
     ]),
-        html.Div([
+    html.Div([
+            dcc.RadioItems(
+                ['Electric', 'Magnetic'],
+                'Electric',
+                id='Field Type',
+                inline=True)
+        ], style={'width': '100%', 'text-align': 'center', 'display': 'inline-block', 'font-size': 32}),
+    html.Div([html.Br()]),
+    html.Div([
+            dcc.RadioItems(
+                ['Magnitude', 'Phase'],
+                'Magnitude',
+                id='Plot Type',
+                inline=True)
+        ], style={'width': '100%', 'text-align': 'center', 'display': 'inline-block', 'font-size': 32}),
+    html.Div([html.Br()]),
+    html.Div([
         dcc.Graph(
-            id='Ex-Graph'
+            id='Ex-Truth-Graph'
         )], style = {'width': '33%','display': 'inline-block'}),
     html.Div([
         dcc.Graph(
-            id='Ey-Graph'
+            id='Ey-Truth-Graph'
         )], style = {'width': '33%','display': 'inline-block'}),
     html.Div([
         dcc.Graph(
-            id='Ez-Graph'
+            id='Ez-Truth-Graph'
+        )], style = {'width': '33%','display': 'inline-block'}),
+    html.Div([html.Br()]),
+    html.Div([
+        dcc.Graph(
+            id='Ex-CNN-Graph'
+        )], style = {'width': '33%','display': 'inline-block'}),
+    html.Div([
+        dcc.Graph(
+            id='Ey-CNN-Graph'
+        )], style = {'width': '33%','display': 'inline-block'}),
+    html.Div([
+        dcc.Graph(
+            id='Ez-CNN-Graph'
         )], style = {'width': '33%','display': 'inline-block'}),
     dcc.Store(id='FieldData')
 ])
@@ -410,14 +504,26 @@ def calculate_field(ShapeIDX, Wavelength):
     df = df.set_index("Wavelength [nm]")
     components = df.loc[Wavelength].to_numpy().tolist()
     wl = Wavelength*1E-9
-    field = np.random.rand(100,100)
     aE = [components[0], components[2], components[4]]
     aH = [components[6], components[8], components[10]]
     dTheta = 0.05
     dPhi = 0.05 
-    E, H = GetField(aE,aH, wl, dTheta, dPhi)
-    Ex, Ey, Ez = E
-    return [magnitude(Ex), magnitude(Ey),magnitude(Ez)]
+    E0, H0 = GetField(aE,aH, wl, dTheta, dPhi)
+    Ex0, Ey0, Ez0 = E0
+    Hx0, Hy0, Hz0 = H0
+    aE = [components[1], components[3], components[5]]
+    aH = [components[7], components[9], components[11]]
+    E1, H1 = GetField(aE,aH, wl, dTheta, dPhi)
+    Ex1, Ey1, Ez1 = E1
+    Hx1, Hy1, Hz1 = H1
+    return [magnitude(Ex0), magnitude(Ey0), magnitude(Ez0),
+            magnitude(Ex1), magnitude(Ey1), magnitude(Ez1),
+            magnitude(Hx0), magnitude(Hy0), magnitude(Hz0),
+            magnitude(Hx1), magnitude(Hy1), magnitude(Hz1),
+            phase(Ex0), phase(Ey0), phase(Ez0),
+            phase(Ex1), phase(Ey1), phase(Ez1),
+            phase(Hx0), phase(Hy0), phase(Hz0),
+            phase(Hx1), phase(Hy1), phase(Hz1)]
 
 
 @callback(
@@ -426,31 +532,144 @@ def calculate_field(ShapeIDX, Wavelength):
 )
 def update_figure(value):
     fig = px.imshow(DataSet["Geometry Data"][value])
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
     return fig
 
 @callback(
-    Output('Ex-Graph', 'figure'),
+    Output('Ex-Truth-Graph', 'figure'),
     Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
 )
-def update_figure(data):
-    fig = px.imshow(data[0])
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionTruth(data, FieldType, PlotType, "X")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap, labels = {"y": "FDTD"})
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>x</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
     return fig
 
 @callback(
-    Output('Ey-Graph', 'figure'),
+    Output('Ey-Truth-Graph', 'figure'),
     Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
 )
-def update_figure(data):
-    fig = px.imshow(data[1])
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionTruth(data, FieldType, PlotType, "Y")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap)
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>y</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
     return fig
 
 @callback(
-    Output('Ez-Graph', 'figure'),
+    Output('Ez-Truth-Graph', 'figure'),
     Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
 )
-def update_figure(data):
-    fig = px.imshow(data[2])
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionTruth(data, FieldType, PlotType, "Z")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap)
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>z</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
     return fig
+
+@callback(
+    Output('Ex-CNN-Graph', 'figure'),
+    Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
+)
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionPrediction(data, FieldType, PlotType, "X")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap, labels = {"y": "CNN"})
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>x</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
+    return fig
+
+@callback(
+    Output('Ey-CNN-Graph', 'figure'),
+    Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
+)
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionPrediction(data, FieldType, PlotType, "Y")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap)
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>y</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
+    return fig
+
+@callback(
+    Output('Ez-CNN-Graph', 'figure'),
+    Input('FieldData', 'data'),
+    Input('Field Type', 'value'),
+    Input('Plot Type', 'value')
+)
+def update_figure(data, FieldType, PlotType):
+    A = DataSelectionPrediction(data, FieldType, PlotType, "Z")
+    if PlotType == "Phase":
+        colormap = "edge"
+    elif PlotType == "Magnitude":
+        colormap = "jet"
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    fig = px.imshow(A, color_continuous_scale=colormap)
+    fig.update_xaxes(showticklabels=False)
+    fig.update_layout(title_text=f"{FieldType[0]}<sub>z</sub> {PlotType}", title_x=0.5)
+    fig.update_layout(font=dict(size=32, family="American Typewriter", color="Black"))
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_yaxes(showticklabels=False)
+    return fig
+
+
 
 
 if __name__ == '__main__':
