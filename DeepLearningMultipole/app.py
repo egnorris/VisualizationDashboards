@@ -507,7 +507,7 @@ def calculate_field(ShapeIDX, Wavelength):
     aE = [components[0], components[2], components[4]]
     aH = [components[6], components[8], components[10]]
     dTheta = 0.05
-    dPhi = 0.05 
+    dPhi = 0.05
     E0, H0 = GetField(aE,aH, wl, dTheta, dPhi)
     Ex0, Ey0, Ez0 = E0
     Hx0, Hy0, Hz0 = H0
